@@ -1,0 +1,129 @@
+http:
+  #region routers 
+  routers:
+    # xui:
+    #   entryPoints:
+    #     - "https"
+    #   rule: "Host(`xui.aiinus.top`)"
+    #   middlewares:
+    #     - default-headers
+    #     - https-redirectscheme
+    #   tls: {}
+    #   service: xui
+    
+    blog_redirect:
+      entryPoints:
+        - "http"
+      rule: "Host(`blog.aiinus.top`)"
+      middlewares:
+        - https-redirectscheme
+      service: noop  # 用于重定向，无需实际服务
+
+    blog_secure:
+      entryPoints:
+        - "https"
+      rule: "Host(`blog.aiinus.top`)"
+      tls: {}
+      middlewares:
+        - default-headers
+      service: blog
+    
+    blog_images:
+      entryPoints:
+        - "https"
+      rule: "Host(`blog.aiinus.top`) && PathPrefix(`/assets/images`)"
+      tls: {}
+      service: blog
+      middlewares:
+        - blog-images-chain
+
+    blog_assets:
+      entryPoints:
+        - "https"
+      rule: "Host(`blog.aiinus.top`) && PathRegexp(`\\.(css|js)$`)"
+      tls: {}
+      service: blog
+      middlewares:
+        - blog-images-chain
+
+    # sub-store 路由
+    sub-store:
+      rule: "Host(`substore.aiinus.top`)"
+      entryPoints:
+        - https
+      service: sub-store
+      tls:
+        certResolver: cloudflare-aiinus
+  
+  #endregion
+  #region services
+  services:
+    # xui:
+    #   loadBalancer:
+    #     servers:
+    #       - url: "http://127.0.0.1:55666"
+    #     passHostHeader: true
+
+    blog:
+      loadBalancer:
+        servers:
+          - url: "http://ghost:2368"
+        passHostHeader: true
+
+    noop:
+      loadBalancer:
+        servers: []
+
+    sub-store:
+      loadBalancer:
+        servers:
+          - url: "http://sub-store:3001"  # 后端服务地址
+
+  #endregion
+  middlewares:
+    https-redirectscheme:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+    default-headers:
+      headers:
+        frameDeny: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 15552000
+        customFrameOptionsValue: SAMEORIGIN
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+
+    cache-images:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "public, max-age=31536000"
+
+    cache-assets:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "public, max-age=31536000"
+
+    default-whitelist:
+      ipAllowList:
+        sourceRange:
+          - "10.0.0.0/8"
+          - "192.168.0.0/16"
+          - "172.16.0.0/12"
+
+    secured:
+      chain:
+        middlewares:
+          # - default-whitelist
+          - default-headers
+
+    blog-images-chain:
+      chain:
+        middlewares:
+          - cache-images
+          - default-headers

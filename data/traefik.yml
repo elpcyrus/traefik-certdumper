@@ -1,0 +1,47 @@
+api:
+  insecure: true  # 启用 Traefik Dashboard
+  dashboard: true
+
+entryPoints:
+  http:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: https
+          scheme: https
+          permanent: true  # 添加永久重定向
+  https:
+    address: ":443"
+
+log:
+  level: DEBUG  # 可改为 INFO 或 ERROR
+  filePath: "/var/log/traefik.log"
+
+accessLog:
+  filePath: "/var/log/access.log"
+
+serversTransport:
+  insecureSkipVerify: true
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+  # file:
+  #   filename: /config.yml
+
+certificatesResolvers:
+  cloudflare-aiinus:
+    acme:
+      email: ${EMAIL}
+      storage: acme.json
+      # caServer: https://acme-v02.api.letsencrypt.org/directory # prod (default)
+      caServer: https://acme-staging-v02.api.letsencrypt.org/directory # staging
+      dnsChallenge:
+        provider: cloudflare
+        #disablePropagationCheck: true # uncomment this if you have issues pulling certificates through cloudflare
+        #delayBeforeCheck: 60s # uncomment along with disablePropagationCheck if needed
+        resolvers:
+          - "1.1.1.1:53"
+          - "1.0.0.1:53"
