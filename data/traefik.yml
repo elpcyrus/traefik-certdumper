@@ -32,7 +32,7 @@ providers:
   #   filename: /config.yml
 
 certificatesResolvers:
-  cloudflare-aiinus:
+  ${CERTRESOLVER}:
     acme:
       email: ${EMAIL}
       storage: acme.json

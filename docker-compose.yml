@@ -5,8 +5,9 @@ services:
     image: traefik:v3.0
     container_name: traefik
     restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
+    user: root
+    # security_opt:
+    #   - no-new-privileges:true
     networks:
       - proxy
     ports:
@@ -24,11 +25,9 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /var/log/traefik.log:/var/log/traefik.log
-      - /var/log/access.log:/var/log/access.log
       - ./data/traefik.yml:/traefik.yml:ro
       - ./data/acme.json:/acme.json
-      - ./data/config.yml:/config.yml:ro
+      # - ./data/config.yml:/config.yml:ro
     labels:
       - "traefik.enable=true"
       - "traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_DASHBOARD_CREDENTIALS}"
@@ -47,11 +46,22 @@ services:
   traefik-certs-dumper:
     image: ldez/traefik-certs-dumper
     container_name: traefik-certs-dumper
+    entrypoint: sh -c '
+      apk add jq
+      ; while ! [ -e /acme.json ] || [ "$(jq '\''.[].Certificates | length'\'' /acme.json 2>/dev/null || echo 0)" -eq 0 ]; do
+        echo "Waiting for /acme.json to be available and populated... sleep 3"
+        sleep 3
+      ; done
+      && traefik-certs-dumper file --version v2 --watch \
+        --source /acme.json --dest /certs --domain-subdir \
+        --crt-name=fullchain --key-name=privkey'
     restart: unless-stopped
+    user: root
     volumes:
       - ./data/acme.json:/acme.json  # 将 Traefik 的 acme.json 文件挂载到容器
       - /root/certs:/certs  # 将证书存放的输出目录挂载到容器
-    command: file --version v2 --source /acme.json --dest /certs --domain-subdir --crt-name=fullchain --key-name=privkey --watch  # 使用“file”命令来导出证书
+    # command: file --version v2 --source /acme.json --dest /certs --domain-subdir --crt-name=fullchain --key-name=privkey --watch  # 使用“file”命令来导出证书
+
 
 secrets:
   cf_api_token:

@@ -1,20 +1,11 @@
 http:
   #region routers 
   routers:
-    # xui:
-    #   entryPoints:
-    #     - "https"
-    #   rule: "Host(`xui.aiinus.top`)"
-    #   middlewares:
-    #     - default-headers
-    #     - https-redirectscheme
-    #   tls: {}
-    #   service: xui
     
     blog_redirect:
       entryPoints:
         - "http"
-      rule: "Host(`blog.aiinus.top`)"
+      rule: "Host(`blog.${DOMAIN}`)"
       middlewares:
         - https-redirectscheme
       service: noop  # 用于重定向，无需实际服务
@@ -22,7 +13,7 @@ http:
     blog_secure:
       entryPoints:
         - "https"
-      rule: "Host(`blog.aiinus.top`)"
+      rule: "Host(`blog.${DOMAIN}`)"
       tls: {}
       middlewares:
         - default-headers
@@ -31,7 +22,7 @@ http:
     blog_images:
       entryPoints:
         - "https"
-      rule: "Host(`blog.aiinus.top`) && PathPrefix(`/assets/images`)"
+      rule: "Host(`blog.${DOMAIN}`) && PathPrefix(`/assets/images`)"
       tls: {}
       service: blog
       middlewares:
@@ -40,29 +31,23 @@ http:
     blog_assets:
       entryPoints:
         - "https"
-      rule: "Host(`blog.aiinus.top`) && PathRegexp(`\\.(css|js)$`)"
+      rule: "Host(`blog.${DOMAIN}`) && PathRegexp(`\\.(css|js)$`)"
       tls: {}
       service: blog
       middlewares:
         - blog-images-chain
 
-    # sub-store 路由
-    sub-store:
-      rule: "Host(`substore.aiinus.top`)"
-      entryPoints:
-        - https
-      service: sub-store
-      tls:
-        certResolver: cloudflare-aiinus
+    # # sub-store 路由
+    # sub-store:
+    #   rule: "Host(`substore.${DOMAIN}`)"
+    #   entryPoints:
+    #     - https
+    #   service: sub-store
+    #   tls: {}
   
   #endregion
   #region services
   services:
-    # xui:
-    #   loadBalancer:
-    #     servers:
-    #       - url: "http://127.0.0.1:55666"
-    #     passHostHeader: true
 
     blog:
       loadBalancer:
@@ -74,10 +59,10 @@ http:
       loadBalancer:
         servers: []
 
-    sub-store:
-      loadBalancer:
-        servers:
-          - url: "http://sub-store:3001"  # 后端服务地址
+    # sub-store:
+    #   loadBalancer:
+    #     servers:
+    #       - url: "http://sub-store:3001"  # 后端服务地址
 
   #endregion
   middlewares:
